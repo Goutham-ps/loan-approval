@@ -15,31 +15,29 @@ st.title("🏦 AI Loan Approval System")
 st.markdown("""
 <style>
 
-/* 🔥 Make whole header sticky */
+/* Add spacing so content doesn't go under header */
 .block-container {
-    padding-top: 1rem;
+    padding-top: 4rem;
 }
 
-/* Target main header area */
-header, .stApp > div:first-child {
+/* Sticky title */
+h1 {
     position: sticky;
     top: 0;
-    z-index: 999;
+    z-index: 1000;
     background-color: #0e1117;
+    padding: 10px 0;
+    margin-bottom: 0;
 }
 
-/* Sticky tabs */
+/* Sticky tabs below title */
 div[data-testid="stTabs"] {
     position: sticky;
-    top: 60px;  /* adjust based on title height */
-    z-index: 998;
+    top: 60px;  /* adjust if needed */
+    z-index: 999;
     background-color: #0e1117;
+    padding-top: 5px;
     border-bottom: 1px solid #333;
-}
-
-/* Optional: smooth look */
-h1 {
-    margin-bottom: 0px;
 }
 
 </style>
