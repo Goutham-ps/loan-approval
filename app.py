@@ -3,6 +3,9 @@ import pandas as pd
 import joblib
 import sqlite3
 from datetime import datetime
+import shap
+import matplotlib.pyplot as plt
+import plotly.express as px
 
 # ----------------------------
 # CONFIG
@@ -157,7 +160,133 @@ with tab1:
                 st.error("🔴 High Risk")
 
         st.progress(float(prob))
+        
+        # ----------------------------
+        # 🧠 EXPLANATION
+        # ----------------------------
+        st.markdown("---")
+        st.subheader("🧠 Why was this prediction made?")
 
+        reasons = []
+
+        if Credit_History == 1:
+            reasons.append("✅ Good Credit History improves approval chances")
+        else:
+            reasons.append("❌ Poor Credit History reduces approval chances")
+
+        if ApplicantIncome > 10000:
+            reasons.append("✅ Strong Income positively influences approval")
+        else:
+            reasons.append("⚠️ Lower Income may reduce approval chances")
+
+        if LoanAmount > 250:
+            reasons.append("⚠️ Large Loan Amount increases risk")
+
+        if Property_Area == "Urban":
+            reasons.append("🏙️ Urban Property Area may improve approval likelihood")
+
+        for reason in reasons:
+            st.write(reason)
+
+        # ----------------------------
+        # 📊 FEATURE IMPORTANCE
+        # ----------------------------
+        st.markdown("### 📊 Feature Importance Analysis")
+
+        try:
+
+            # Pipeline parts
+            rf_model = model.named_steps['model']
+            preprocessor = model.named_steps['preprocessing']
+
+            # Transform input
+            transformed_input = preprocessor.transform(input_data)
+
+            # Feature names
+            feature_names = preprocessor.get_feature_names_out()
+
+            # Clean names
+            feature_names = [
+                name.replace("num__", "")
+                    .replace("cat__", "")
+                for name in feature_names
+            ]
+
+            # Friendly names
+            feature_map = {
+                "ApplicantIncome": "Applicant Income",
+                "CoapplicantIncome": "Co-applicant Income",
+                "LoanAmount": "Loan Amount",
+                "Loan_Amount_Term": "Loan Term",
+                "Credit_History": "Credit History",
+                "TotalIncome": "Total Income",
+                "Income_per_Loan": "Income per Loan",
+
+                "Gender_Male": "Male Applicant",
+                "Gender_Female": "Female Applicant",
+
+                "Married_Yes": "Married",
+                "Married_No": "Not Married",
+
+                "Education_Graduate": "Graduate",
+                "Education_Not Graduate": "Not Graduate",
+
+                "Self_Employed_Yes": "Self Employed",
+                "Self_Employed_No": "Not Self Employed",
+
+                "Property_Area_Urban": "Urban Property",
+                "Property_Area_Semiurban": "Semiurban Property",
+                "Property_Area_Rural": "Rural Property"
+            }
+
+            feature_names = [
+                feature_map.get(name, name)
+                for name in feature_names
+            ]
+
+            # SHAP Explainer
+            explainer = shap.TreeExplainer(rf_model)
+
+            shap_values = explainer(transformed_input)
+
+            # Create dataframe
+            importance_df = pd.DataFrame({
+                "Feature": feature_names,
+                "Impact": abs(shap_values.values[0, :, 1])
+            })
+
+            importance_df = (
+                importance_df
+                .sort_values("Impact", ascending=False)
+                .head(10)
+            )
+
+            # ----------------------------
+            # PLOTLY CHART
+            # ----------------------------
+            fig = px.bar(
+                importance_df,
+                x="Impact",
+                y="Feature",
+                orientation="h",
+                title="Top Features Influencing the Decision",
+                text_auto=".3f"
+            )
+
+            fig.update_layout(
+                height=500,
+                yaxis=dict(categoryorder="total ascending"),
+                xaxis_title="Impact Score",
+                yaxis_title=""
+            )
+
+            st.plotly_chart(
+                fig,
+                use_container_width=True
+            )
+
+        except Exception as e:
+            st.warning(f"Feature importance unavailable: {e}")
         # ----------------------------
         # SAVE TO DATABASE
         # ----------------------------
@@ -178,6 +307,9 @@ with tab1:
         ))
 
         conn.commit()
+
+
+    
 
 # ============================
 # 📊 TAB 2 — INSIGHTS
